@@ -32,10 +32,10 @@ class SlidingWindow:
 
 
 class Monitor:
-    def __init__(self, context):
+    def __init__(self, context, duration):
         self._context = context
         self._report_interval = 0.1
-        self._runtime = 10.0
+        self._runtime = duration
         self._next_report = time.monotonic() + self._report_interval
         self._end_time = time.monotonic() + self._runtime
         self._bytes_received = 0
@@ -188,26 +188,26 @@ async def create_uploader(server, monitor):
     return t.complete
 
 
-async def main(server):
-    monitor = Monitor('Download')
+async def main(server, duration):
+    monitor = Monitor('Download', duration)
     downloaders = [await create_downloader(server, monitor) for _ in range(32)]
     return sum(await asyncio.gather(*downloaders))
 
 
-async def upload_main(server):
-    monitor = Monitor('Upload')
+async def upload_main(server, duration):
+    monitor = Monitor('Upload', duration)
     downloaders = [await create_uploader(server, monitor) for _ in range(32)]
     return sum(await asyncio.gather(*downloaders))
 
 
-def upload(server):
+def upload(server, duration):
     print(f"Connecting to {server.sponsor} ({server.name}, {server.country})")
-    bytes_received = asyncio.run(upload_main(server))
+    bytes_received = asyncio.run(upload_main(server, duration))
 
 
-def download(server):
+def download(server, duration):
     print(f"Connecting to {server.sponsor} ({server.name}, {server.country})")
-    bytes_received = asyncio.run(main(server))
+    bytes_received = asyncio.run(main(server, duration))
 
 
 class Server:
@@ -249,6 +249,8 @@ def real_main():
     parser = argparse.ArgumentParser(description='Test network speed')
     parser.set_defaults(command=None)
     parser.add_argument('--server', type=int, help='Server ID', default=None)
+    parser.add_argument('--duration', type=float,
+                        help='Duration of test', default=20.0)
     subparser = parser.add_subparsers()
     list_servers_parser = subparser.add_parser('list')
     list_servers_parser.set_defaults(command='list')
@@ -260,13 +262,13 @@ def real_main():
     if opts.command == 'list':
         list_servers()
     elif opts.command == 'download':
-        download(get_server(opts.server))
+        download(get_server(opts.server), opts.duration)
     elif opts.command == 'upload':
-        upload(get_server(opts.server))
+        upload(get_server(opts.server), opts.duration)
     elif opts.command is None:
         server = get_server(opts.server)
-        download(server)
-        upload(server)
+        download(server, opts.duration)
+        upload(server, opts.duration)
 
 
 if __name__ == '__main__':
