@@ -224,8 +224,9 @@ class Server:
 
 
 def retrieve_servers():
-    text = requests.get(
-        'http://c.speedtest.net/speedtest-servers.php', stream=True).text
+    url = 'http://c.speedtest.net/speedtest-servers.php'
+    url = 'http://c.speedtest.net/speedtest-servers-static.php'
+    text = requests.get(url, stream=True).text
     tree = xml.fromstring(text.encode())
     return [Server(node) for node in tree.xpath('//server')]
 
